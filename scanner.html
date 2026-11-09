@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>Scanner QR Presensi Siswa</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0f172a;color:#e2e8f0;font-family:Arial,sans-serif;padding:20px;display:flex;justify-content:center;align-items:center}
+    .wrap{width:min(100%,680px)}.card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:22px;box-shadow:0 20px 50px #0005}
+    h1{font-size:22px;margin:0;color:#67e8f9}.sub{font-size:13px;color:#94a3b8;line-height:1.6}.mode{display:inline-block;background:#0e7490;color:white;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:bold;margin:10px 0 16px}
+    #reader{width:100%;min-height:280px;border:1px solid #475569;border-radius:14px;overflow:hidden;background:#020617}#reader video{object-fit:cover}
+    .status{margin-top:14px;padding:12px;border-radius:10px;background:#0f172a;color:#cbd5e1;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:10px;padding:12px 16px;font-weight:bold;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.primary{background:#0891b2;color:white}.secondary{background:#334155;color:#e2e8f0}.danger{background:#be123c;color:white}
+    .nisn{font-family:monospace;color:#6ee7b7;font-size:20px;font-weight:bold}.hint{font-size:12px;color:#94a3b8;margin-top:14px}
+  </style>
+</head>
+<body>
+  <main class="wrap"><section class="card">
+    <h1>SCANNER QR PRESENSI</h1>
+    <p class="sub">Arahkan QR Code kartu siswa ke kamera. Setelah terbaca, NISN dikirim kembali ke halaman dashboard untuk divalidasi oleh Google Apps Script.</p>
+    <div class="mode" id="modeLabel">MODE DATANG</div>
+    <div id="reader"></div>
+    <div class="status" id="status">Tekan tombol <b>Aktifkan Kamera</b>. Izinkan akses kamera ketika browser memintanya.</div>
+    <div class="actions">
+      <button class="primary" id="startBtn" onclick="startCamera()">📷 Aktifkan Kamera</button>
+      <button class="secondary" id="switchBtn" onclick="switchCamera()" disabled>Ganti Kamera</button>
+      <button class="danger" id="stopBtn" onclick="stopCamera()" disabled>Matikan Kamera</button>
+    </div>
+
+    <!-- AREA INPUT MANUAL NISN & NAVIGASI KEMBALI -->
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="manualNisnInput" placeholder="Ketik NISN manual..." style="flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 10px; padding: 10px 12px; color: white; font-size: 13px; font-family: monospace;" onkeypress="if(event.key==='Enter') submitManualNisn()">
+        <button class="primary" onclick="submitManualNisn()" style="padding: 10px 16px; white-space: nowrap;">Kirim NISN</button>
+      </div>
+      <button onclick="goToDashboard()" style="background: #475569; color: #f8fafc; width: 100%; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; text-align: center;">
+        ← Kembali ke Dashboard
+      </button>
+    </div>
+
+    <p class="hint">Jika kamera gagal: pastikan halaman dibuka melalui HTTPS, izin kamera Chrome diizinkan, dan tidak ada aplikasi lain yang sedang memakai kamera.</p>
+  </section></main>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode') === 'out' ? 'out' : 'in';
+  const channel = params.get('channel') || '';
+  const openerOrigin = params.get('openerOrigin') || '*';
+  document.getElementById('modeLabel').textContent = mode === 'out' ? 'MODE PULANG' : 'MODE DATANG';
+
+  let scanner = null;
+  let cameras = [];
+  let cameraIndex = -1;
+  let busy = false;
+  let started = false;
+
+  function setStatus(message, isError) {
+    const el = document.getElementById('status');
+    el.textContent = message;
+    el.style.border = isError ? '1px solid #e11d48' : '1px solid #334155';
+    el.style.color = isError ? '#fda4af' : '#cbd5e1';
+  }
+
+  function explainCameraError(err) {
+    const name = err && err.name ? err.name : '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'Izin kamera ditolak. Klik ikon gembok/pengaturan situs di Chrome, izinkan Kamera, lalu muat ulang halaman.';
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'Kamera tidak ditemukan. Periksa webcam atau sambungkan kamera terlebih dahulu.';
+    if (name === 'NotReadableError' || name === 'TrackStartError') return 'Kamera sedang digunakan aplikasi lain atau gagal dibuka. Tutup aplikasi kamera lain lalu coba kembali.';
+    if (name === 'OverconstrainedError') return 'Kamera tidak mendukung konfigurasi yang diminta. Coba kamera lain.';
+    if (!window.isSecureContext) return 'Halaman tidak berada pada koneksi aman. Gunakan alamat GitHub Pages HTTPS.';
+    return 'Kamera gagal dibuka: ' + (err && err.message ? err.message : String(err));
+  }
+
+  async function startCamera() {
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('Browser tidak menyediakan akses kamera. Pastikan membuka halaman GitHub Pages dengan HTTPS menggunakan Chrome/Edge versi terbaru.', true);
+      return;
+    }
+    document.getElementById('startBtn').disabled = true;
+    setStatus('Meminta izin kamera dari browser...');
+    try {
+      cameras = await Html5Qrcode.getCameras();
+      if (!cameras || !cameras.length) throw new Error('Tidak ada perangkat kamera yang terdeteksi.');
+      if (cameraIndex < 0 || cameraIndex >= cameras.length) cameraIndex = chooseBackCamera(cameras);
+      if (!scanner) scanner = new Html5Qrcode('reader', { verbose: false });
+      await scanner.start(
+        { deviceId: { exact: cameras[cameraIndex].id } },
+        { fps: 12, qrbox: function(viewWidth, viewHeight) {
+            const size = Math.floor(Math.min(viewWidth, viewHeight) * 0.72);
+            return { width: Math.max(180, Math.min(size, 320)), height: Math.max(180, Math.min(size, 320)) };
+          }, aspectRatio: 1.0, rememberLastUsedCamera: true },
+        onQrDecoded,
+        function() {}
+      );
+      started = true;
+      document.getElementById('switchBtn').disabled = cameras.length < 2;
+      document.getElementById('stopBtn').disabled = false;
+      setStatus('Kamera aktif. Arahkan QR Code siswa ke kotak pemindaian.');
+    } catch (err) {
+      document.getElementById('startBtn').disabled = false;
+      setStatus(explainCameraError(err), true);
+      console.error('Camera start failed:', err);
+    }
+  }
+
+  function chooseBackCamera(list) {
+    const idx = list.findIndex(c => /back|rear|environment|belakang/i.test(c.label || ''));
+    return idx >= 0 ? idx : 0;
+  }
+
+  async function switchCamera() {
+    if (!cameras.length) return;
+    const wasStarted = started;
+    if (wasStarted) await stopCamera();
+    cameraIndex = (cameraIndex + 1) % cameras.length;
+    await startCamera();
+  }
+
+  async function stopCamera() {
+    if (scanner && started) {
+      try { await scanner.stop(); } catch (e) { console.warn(e); }
+    }
+    started = false;
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('switchBtn').disabled = cameras.length < 2;
+    document.getElementById('reader').style.opacity = '1';
+    setStatus('Kamera dimatikan.');
+  }
+
+  async function onQrDecoded(decodedText) {
+    if (busy) return;
+    let nisn = String(decodedText == null ? '' : decodedText).trim();
+    if (!/^\d{1,10}$/.test(nisn)) {
+      setStatus('Isi input bukan NISN valid (maks 10 digit). Periksa NISN.', true);
+      return;
+    }
+    nisn = nisn.padStart(10, '0');
+    if (!channel) {
+      setStatus('Kode koneksi scanner tidak tersedia. Tutup tab ini dan buka scanner dari dashboard.', true);
+      return;
+    }
+    busy = true;
+    setStatus('Mengirim NISN ' + nisn + ' ke dashboard...');
+    document.getElementById('reader').style.opacity = '0.45';
+    try { if (scanner && started) await scanner.pause(true); } catch (e) {}
+
+    const payload = { type: 'PRESENSI_QR_RESULT', status: 'success', channel: channel, nisn: nisn, mode: mode };
+    if (window.opener && !window.opener.closed) {
+      try {
+        window.opener.postMessage(payload, openerOrigin);
+        setStatus('NISN ' + nisn + ' berhasil dikirim. Menyiapkan pemindaian siswa berikutnya...');
+      } catch (err) {
+        setStatus('Gagal mengirim hasil ke dashboard: ' + (err.message || err), true);
+      }
+      if (resumeFallbackTimer) clearTimeout(resumeFallbackTimer);
+      resumeFallbackTimer = setTimeout(async function() {
+        busy = false;
+        document.getElementById('reader').style.opacity = '1';
+        try { if (scanner && started) await scanner.resume(); } catch (e) {
+          setStatus('NISN terkirim, tetapi kamera gagal melanjutkan. Tekan Aktifkan Kamera kembali.', true);
+        }
+      }, 20000);
+    } else {
+      setStatus('Tab dashboard asal tidak ditemukan. Buka scanner dari tombol di dashboard.', true);
+      busy = false;
+      document.getElementById('reader').style.opacity = '1';
+      try { if (scanner && started) await scanner.resume(); } catch (e) {}
+    }
+  }
+
+  function submitManualNisn() {
+    const inputField = document.getElementById('manualNisnInput');
+    const val = inputField.value.trim();
+    if (!val) {
+      alert("Masukkan NISN terlebih dahulu!");
+      return;
+    }
+    onQrDecoded(val);
+    inputField.value = '';
+  }
+
+  function goToDashboard() {
+    if (window.opener && !window.opener.closed) {
+      window.opener.focus();
+      window.close();
+    } else {
+      history.back();
+    }
+  }
+
+  window.addEventListener('message', function(event) {
+    if (event.source !== window.opener || event.origin !== openerOrigin) return;
+    const msg = event.data || {};
+    if (msg.type !== 'PRESENSI_QR_ACK' || msg.channel !== channel) return;
+    setStatus(msg.message || (msg.status === 'success' ? 'Presensi berhasil. Siap memindai siswa berikutnya.' : 'Presensi gagal. Siap memindai ulang.'));
+    busy = false;
+    document.getElementById('reader').style.opacity = '1';
+    if (resumeFallbackTimer) clearTimeout(resumeFallbackTimer);
+    try { if (scanner && started) scanner.resume(); } catch (e) {
+      setStatus('Hasil telah diproses, tetapi kamera gagal melanjutkan. Tekan Aktifkan Kamera kembali.', true);
+    }
+  });
+
+  let resumeFallbackTimer = null;
+
+  window.addEventListener('beforeunload', function() {
+    try { if (scanner && started) scanner.stop(); } catch (e) {}
+  });
+</script>
+</body>
+</html>
