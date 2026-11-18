@@ -17,7 +17,7 @@
     h1{font-size:19px;margin:0;color:#ff2a85;text-shadow:0 0 10px rgba(255,42,133,0.5);letter-spacing:0.5px}
     .sub{font-size:12px;color:#94a3b8;margin:4px 0 0;line-height:1.4}
     .admin-btn{background:linear-gradient(135deg, #1e293b, #0f172a);color:#f472b6;border:1px solid rgba(255,42,133,0.45);border-radius:12px;padding:8px 12px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all 0.2s}
-    .admin-btn:hover{background:#ff2a85;color:#fff;box-shadow:0 0 15px rgba(255,42,133,0.4)}
+    .admin-btn:hover,.admin-btn:active{background:#ff2a85;color:#fff;box-shadow:0 0 15px rgba(255,42,133,0.4)}
 
     /* Mode Selector Datang / Pulang */
     .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;background:#060911;padding:5px;border-radius:14px;border:1px solid #1e293b}
@@ -50,15 +50,15 @@
 <body>
   <main class="wrap">
     <section class="card">
-      <!-- Header & Tombol Login Admin -->
+      <!-- Header & Tombol Login Admin (Langsung mengarah ke Apps Script dengan ?view=admin) -->
       <div class="top-bar">
         <div>
           <h1>PRESENSI JURNALISTIK</h1>
           <p class="sub">SMPN 2 Tumpang • Pindai QR Kartu Siswa</p>
         </div>
-        <button type="button" class="admin-btn" onclick="openAdminDashboard()">
+        <a href="https://script.google.com/macros/s/AKfycbwzZrtv-1NeqU7U-RElQCWigFzIZOn8AclfvhYyq35qsaGMU5d0WlPd-Kxmv1I45I4B/exec?view=admin" class="admin-btn">
           🔐 Login Admin
-        </button>
+        </a>
       </div>
 
       <!-- Pemilih Mode Datang / Pulang -->
@@ -91,10 +91,7 @@
   </main>
 
 <script>
-  // =========================================================================
-  // WAJIB DIISI: Ganti dengan URL Web App (/exec) Google Apps Script Anda!
-  // =========================================================================
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT_ANDA/exec';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzZrtv-1NeqU7U-RElQCWigFzIZOn8AclfvhYyq35qsaGMU5d0WlPd-Kxmv1I45I4B/exec';
 
   let currentMode = 'in';
   let scanner = null;
@@ -115,17 +112,6 @@
       btnIn.className = 'mode-btn';
     }
     setStatus('Mode diubah ke: <b>' + (mode === 'in' ? 'DATANG' : 'PULANG') + '</b>. Silakan pindai QR siswa.', 'normal');
-  }
-
-  function openAdminDashboard() {
-    if (APPS_SCRIPT_URL.includes('GANTI_DENGAN_ID')) {
-      alert('URL Google Apps Script belum dikonfigurasi pada file scanner.html!');
-      return;
-    }
-    // Mengarahkan ke Dashboard Apps Script dengan parameter ?view=admin
-    const adminUrl = new URL(APPS_SCRIPT_URL);
-    adminUrl.searchParams.set('view', 'admin');
-    window.location.href = adminUrl.toString();
   }
 
   function setStatus(message, type = 'normal') {
@@ -230,7 +216,6 @@
     try { if (scanner && started) await scanner.pause(true); } catch (e) {}
 
     try {
-      // Kirim langsung ke Google Apps Script Web App via POST (text/plain menghindari CORS preflight)
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -260,7 +245,6 @@
       setStatus('✖ Gagal terhubung ke server Google Sheets. Periksa koneksi internet Anda.', 'error');
     }
 
-    // Jeda 2.2 detik sebelum kamera siap memindai siswa berikutnya agar tidak double-scan
     setTimeout(async () => {
       busy = false;
       document.getElementById('reader').style.opacity = '1';
@@ -279,7 +263,6 @@
     inputField.value = '';
   }
 
-  // Otomatis nyalakan kamera saat halaman terbuka di APK
   window.addEventListener('load', function() {
     setTimeout(startCamera, 600);
   });
