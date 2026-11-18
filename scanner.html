@@ -2,87 +2,80 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0b0f19">
   <title>Presensi Jurnalistik - Scanner QR</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{margin:0;min-height:100vh;background:#0b0f19;color:#e2e8f0;font-family:Arial,sans-serif;padding:16px;display:flex;justify-content:center;align-items:center}
     .wrap{width:min(100%,540px)}
-    .card{background:rgba(22, 27, 38, 0.88);border:1px solid rgba(255, 42, 133, 0.35);border-radius:24px;padding:20px;box-shadow:0 0 35px rgba(255, 42, 133, 0.25);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .card{background:#161b26;border:1px solid rgba(255, 42, 133, 0.45);border-radius:24px;padding:20px;box-shadow:0 0 25px rgba(255, 42, 133, 0.2)}
     
     /* Top Bar Header & Tombol Admin */
-    .top-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;border-bottom:1px solid rgba(255,42,133,0.2);padding-bottom:14px}
-    h1{font-size:19px;margin:0;color:#ff2a85;text-shadow:0 0 10px rgba(255,42,133,0.5);letter-spacing:0.5px}
-    .sub{font-size:12px;color:#94a3b8;margin:4px 0 0;line-height:1.4}
-    .admin-btn{background:linear-gradient(135deg, #1e293b, #0f172a);color:#f472b6;border:1px solid rgba(255,42,133,0.45);border-radius:12px;padding:8px 12px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all 0.2s}
-    .admin-btn:hover,.admin-btn:active{background:#ff2a85;color:#fff;box-shadow:0 0 15px rgba(255,42,133,0.4)}
+    .top-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;border-bottom:1px solid rgba(255,42,133,0.2);padding-bottom:14px}
+    h1{font-size:18px;margin:0;color:#ff2a85;letter-spacing:0.5px}
+    .sub{font-size:12px;color:#94a3b8;margin:4px 0 0}
+    .admin-btn{background:#1e293b;color:#f472b6;border:1px solid #ff2a85;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+    .admin-btn:active{background:#ff2a85;color:#fff}
 
     /* Mode Selector Datang / Pulang */
     .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;background:#060911;padding:5px;border-radius:14px;border:1px solid #1e293b}
-    .mode-btn{border:0;border-radius:10px;padding:10px;font-size:12px;font-weight:bold;cursor:pointer;transition:all 0.25s;color:#94a3b8;background:transparent}
-    .mode-btn.active-in{background:linear-gradient(135deg, #10b981, #059669);color:white;box-shadow:0 4px 12px rgba(16,185,129,0.3)}
-    .mode-btn.active-out{background:linear-gradient(135deg, #f59e0b, #d97706);color:white;box-shadow:0 4px 12px rgba(245,158,11,0.3)}
+    .mode-btn{border:0;border-radius:10px;padding:12px 10px;font-size:12px;font-weight:bold;cursor:pointer;color:#94a3b8;background:transparent}
+    .mode-btn.active-in{background:#059669;color:white}
+    .mode-btn.active-out{background:#d97706;color:white}
 
-    #reader{width:100%;min-height:260px;border:1px solid rgba(255, 42, 133, 0.4);border-radius:16px;overflow:hidden;background:#020617;box-shadow:inset 0 0 15px rgba(0,0,0,0.8)}
+    #reader{width:100%;min-height:250px;border:1px solid rgba(255, 42, 133, 0.4);border-radius:16px;overflow:hidden;background:#020617}
     #reader video{object-fit:cover}
     
-    .status{margin-top:12px;padding:12px 14px;border-radius:12px;background:#060911;color:#cbd5e1;font-size:13px;line-height:1.5;overflow-wrap:anywhere;border:1px solid rgba(255,42,133,0.2)}
-    .status.success{border-color:#10b981;background:rgba(16,185,129,0.1);color:#6ee7b7}
-    .status.error{border-color:#f43f5e;background:rgba(244,63,94,0.1);color:#fda4af}
+    .status{margin-top:12px;padding:12px 14px;border-radius:12px;background:#060911;color:#cbd5e1;font-size:13px;line-height:1.5;overflow-wrap:anywhere;border:1px solid rgba(255,42,133,0.25)}
+    .status.success{border-color:#10b981;background:rgba(16,185,129,0.12);color:#6ee7b7}
+    .status.error{border-color:#f43f5e;background:rgba(244,63,94,0.12);color:#fda4af}
 
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    button{border:0;border-radius:12px;padding:11px 14px;font-weight:bold;font-size:12px;cursor:pointer;transition:all 0.2s ease}
+    button{border:0;border-radius:12px;padding:12px 14px;font-weight:bold;font-size:12px;cursor:pointer}
     button:disabled{opacity:.4;cursor:not-allowed}
-    .primary{background:linear-gradient(135deg, #ff2a85, #b527cf);color:white;box-shadow:0 4px 15px rgba(255,42,133,0.3);flex:1}
+    .primary{background:linear-gradient(135deg, #ff2a85, #b527cf);color:white;flex:1}
     .secondary{background:#1e293b;color:#e2e8f0;border:1px solid #334155}
-    .danger{background:linear-gradient(135deg, #e11d48, #be123c);color:white}
+    .danger{background:#be123c;color:white}
 
     .manual-box{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,42,133,0.2)}
-    .manual-label{display:block;font-size:11px;font-weight:bold;color:#f472b6;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+    .manual-label{display:block;font-size:11px;font-weight:bold;color:#f472b6;margin-bottom:6px;text-transform:uppercase}
     .manual-row{display:flex;gap:8px}
-    .manual-input{flex:1;background:#060911;border:1px solid #334155;border-radius:12px;padding:10px 14px;color:white;font-size:13px;font-family:monospace;outline:none}
-    .manual-input:focus{border-color:#ff2a85}
+    .manual-input{flex:1;background:#060911;border:1px solid #334155;border-radius:12px;padding:11px 14px;color:white;font-size:13px;font-family:monospace;outline:none}
     .hint{font-size:11px;color:#64748b;margin-top:14px;text-align:center}
   </style>
 </head>
 <body>
   <main class="wrap">
     <section class="card">
-      <!-- Header & Tombol Login Admin (Langsung mengarah ke Apps Script dengan ?view=admin) -->
       <div class="top-bar">
         <div>
           <h1>PRESENSI JURNALISTIK</h1>
-          <p class="sub">SMPN 2 Tumpang • Pindai QR Kartu Siswa</p>
+          <p class="sub">SMPN 2 Tumpang • Pindai QR</p>
         </div>
-        <a href="https://script.google.com/macros/s/AKfycbwzZrtv-1NeqU7U-RElQCWigFzIZOn8AclfvhYyq35qsaGMU5d0WlPd-Kxmv1I45I4B/exec?view=admin" class="admin-btn">
-          🔐 Login Admin
-        </a>
+        <button type="button" class="admin-btn" id="adminLoginBtn">🔐 Login Admin</button>
       </div>
 
-      <!-- Pemilih Mode Datang / Pulang -->
       <div class="mode-switch">
-        <button type="button" id="btnModeIn" class="mode-btn active-in" onclick="setMode('in')">📥 MODE DATANG</button>
-        <button type="button" id="btnModeOut" class="mode-btn" onclick="setMode('out')">📤 MODE PULANG</button>
+        <button type="button" id="btnModeIn" class="mode-btn active-in">📥 MODE DATANG</button>
+        <button type="button" id="btnModeOut" class="mode-btn">📤 MODE PULANG</button>
       </div>
 
-      <!-- Area Kamera -->
       <div id="reader"></div>
-      <div class="status" id="status">Menyiapkan kamera... Atau tekan <b>Aktifkan Kamera</b>.</div>
+      <div class="status" id="status">Pilih mode (Datang/Pulang), lalu tekan <b>Aktifkan Kamera</b>.</div>
 
       <div class="actions">
-        <button class="primary" id="startBtn" onclick="startCamera()">📷 Aktifkan Kamera</button>
-        <button class="secondary" id="switchBtn" onclick="switchCamera()" disabled>🔄 Ganti Kamera</button>
-        <button class="danger" id="stopBtn" onclick="stopCamera()" disabled>⏹ Matikan</button>
+        <button type="button" class="primary" id="startBtn">📷 Aktifkan Kamera</button>
+        <button type="button" class="secondary" id="switchBtn" disabled>🔄 Ganti Kamera</button>
+        <button type="button" class="danger" id="stopBtn" disabled>⏹ Matikan</button>
       </div>
 
-      <!-- Input Manual NISN -->
       <div class="manual-box">
         <label class="manual-label" for="manualNisnInput">Input NISN Manual (Cadangan)</label>
         <div class="manual-row">
-          <input type="text" id="manualNisnInput" inputmode="numeric" maxlength="10" class="manual-input" placeholder="Ketik 10 digit NISN..." onkeypress="if(event.key==='Enter') submitManualNisn()">
-          <button class="primary" style="flex:0 0 auto; padding: 10px 18px;" onclick="submitManualNisn()">Kirim</button>
+          <input type="text" id="manualNisnInput" inputmode="numeric" maxlength="10" class="manual-input" placeholder="Ketik 10 digit NISN...">
+          <button type="button" class="primary" id="manualSubmitBtn" style="flex:0 0 auto; padding: 11px 18px;">Kirim</button>
         </div>
       </div>
 
@@ -100,59 +93,63 @@
   let busy = false;
   let started = false;
 
-  function setMode(mode) {
-    currentMode = mode;
-    const btnIn = document.getElementById('btnModeIn');
-    const btnOut = document.getElementById('btnModeOut');
-    if (mode === 'in') {
-      btnIn.className = 'mode-btn active-in';
-      btnOut.className = 'mode-btn';
-    } else {
-      btnOut.className = 'mode-btn active-out';
-      btnIn.className = 'mode-btn';
-    }
-    setStatus('Mode diubah ke: <b>' + (mode === 'in' ? 'DATANG' : 'PULANG') + '</b>. Silakan pindai QR siswa.', 'normal');
-  }
-
   function setStatus(message, type = 'normal') {
     const el = document.getElementById('status');
     el.innerHTML = message;
     el.className = 'status' + (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
   }
 
-  function playBeep(type = 'success') {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(type === 'success' ? 880 : 220, audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.15);
-    } catch (e) {}
-  }
+  // Event Listener Tombol Mode Datang & Pulang
+  document.getElementById('btnModeIn').addEventListener('click', function() {
+    currentMode = 'in';
+    this.className = 'mode-btn active-in';
+    document.getElementById('btnModeOut').className = 'mode-btn';
+    setStatus('Mode aktif: <b>DATANG</b>. Silakan pindai QR siswa.');
+  });
 
-  function explainCameraError(err) {
-    const name = err && err.name ? err.name : '';
-    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'Izin kamera ditolak. Pastikan izin kamera pada aplikasi Android telah diaktifkan.';
-    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'Kamera tidak ditemukan pada perangkat.';
-    if (name === 'NotReadableError' || name === 'TrackStartError') return 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain lalu coba kembali.';
-    return 'Kamera gagal dibuka: ' + (err && err.message ? err.message : String(err));
-  }
+  document.getElementById('btnModeOut').addEventListener('click', function() {
+    currentMode = 'out';
+    this.className = 'mode-btn active-out';
+    document.getElementById('btnModeIn').className = 'mode-btn';
+    setStatus('Mode aktif: <b>PULANG</b>. Silakan pindai QR siswa.');
+  });
+
+  // Event Listener Tombol Login Admin
+  document.getElementById('adminLoginBtn').addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = '⏳ Membuka...';
+    setStatus('Mengalihkan ke Dashboard Admin...');
+    if (scanner && started) {
+      try { await scanner.stop(); started = false; } catch (e) {}
+    }
+    window.location.href = APPS_SCRIPT_URL + '?view=admin';
+  });
+
+  // Event Listener Tombol Kamera
+  document.getElementById('startBtn').addEventListener('click', startCamera);
+  document.getElementById('switchBtn').addEventListener('click', switchCamera);
+  document.getElementById('stopBtn').addEventListener('click', stopCamera);
+
+  // Event Listener Input Manual
+  document.getElementById('manualSubmitBtn').addEventListener('click', submitManualNisn);
+  document.getElementById('manualNisnInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') submitManualNisn();
+  });
 
   async function startCamera() {
+    if (typeof Html5Qrcode === 'undefined') {
+      setStatus('Library QR Scanner gagal dimuat. Periksa koneksi internet Anda.', 'error');
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('Perangkat atau WebView tidak mendukung akses kamera.', 'error');
+      setStatus('WebView tidak mendukung akses kamera.', 'error');
       return;
     }
     document.getElementById('startBtn').disabled = true;
-    setStatus('Mengaktifkan kamera...');
+    setStatus('Meminta akses kamera...');
     try {
       cameras = await Html5Qrcode.getCameras();
-      if (!cameras || !cameras.length) throw new Error('Tidak ada perangkat kamera yang terdeteksi.');
+      if (!cameras || !cameras.length) throw new Error('Kamera tidak ditemukan.');
       if (cameraIndex < 0 || cameraIndex >= cameras.length) {
         const idx = cameras.findIndex(c => /back|rear|environment|belakang/i.test(c.label || ''));
         cameraIndex = idx >= 0 ? idx : 0;
@@ -160,24 +157,17 @@
       if (!scanner) scanner = new Html5Qrcode('reader', { verbose: false });
       await scanner.start(
         { deviceId: { exact: cameras[cameraIndex].id } },
-        {
-          fps: 12,
-          qrbox: function(viewWidth, viewHeight) {
-            const size = Math.floor(Math.min(viewWidth, viewHeight) * 0.72);
-            return { width: Math.max(180, Math.min(size, 320)), height: Math.max(180, Math.min(size, 320)) };
-          },
-          aspectRatio: 1.0
-        },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
         onQrDecoded,
         function() {}
       );
       started = true;
       document.getElementById('switchBtn').disabled = cameras.length < 2;
       document.getElementById('stopBtn').disabled = false;
-      setStatus('Kamera aktif (<b>' + (currentMode === 'in' ? 'DATANG' : 'PULANG') + '</b>). Arahkan QR Code siswa ke kotak.');
+      setStatus('Kamera aktif (<b>' + (currentMode === 'in' ? 'DATANG' : 'PULANG') + '</b>). Arahkan QR ke kotak.');
     } catch (err) {
       document.getElementById('startBtn').disabled = false;
-      setStatus(explainCameraError(err), 'error');
+      setStatus('Gagal membuka kamera: ' + (err && err.message ? err.message : String(err)), 'error');
     }
   }
 
@@ -204,14 +194,13 @@
     if (busy) return;
     let nisn = String(decodedText == null ? '' : decodedText).trim();
     if (!/^\d{1,10}$/.test(nisn)) {
-      playBeep('error');
-      setStatus('QR Code tidak valid (harus 10 digit angka NISN).', 'error');
+      setStatus('QR tidak valid (harus 10 digit angka NISN).', 'error');
       return;
     }
     nisn = nisn.padStart(10, '0');
     
     busy = true;
-    setStatus('⏳ Memproses presensi NISN <b>' + nisn + '</b>...');
+    setStatus('⏳ Mengirim NISN <b>' + nisn + '</b>...');
     document.getElementById('reader').style.opacity = '0.45';
     try { if (scanner && started) await scanner.pause(true); } catch (e) {}
 
@@ -219,37 +208,24 @@
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'scan',
-          nisn: nisn,
-          mode: currentMode
-        })
+        body: JSON.stringify({ action: 'scan', nisn: nisn, mode: currentMode })
       });
-
       const res = await response.json();
 
       if (res.status === 'success') {
-        playBeep('success');
-        setStatus(
-          `✔ <b>PRESENSI ${res.type} BERHASIL!</b><br>` +
-          `Nama: <b>${res.student.name}</b> (${res.student.class_name})<br>` +
-          `Waktu: ${res.time} | NISN: ${res.nisn}`,
-          'success'
-        );
+        setStatus(`✔ <b>BERHASIL (${res.type})!</b><br>${res.student.name} (${res.student.class_name}) • ${res.time}`, 'success');
       } else {
-        playBeep('error');
         setStatus(`✖ <b>GAGAL:</b> ${res.message}`, 'error');
       }
     } catch (err) {
-      playBeep('error');
-      setStatus('✖ Gagal terhubung ke server Google Sheets. Periksa koneksi internet Anda.', 'error');
+      setStatus('✖ Gagal terhubung ke Google Sheets.', 'error');
     }
 
     setTimeout(async () => {
       busy = false;
       document.getElementById('reader').style.opacity = '1';
       try { if (scanner && started) await scanner.resume(); } catch (e) {}
-    }, 2200);
+    }, 2000);
   }
 
   function submitManualNisn() {
@@ -262,14 +238,6 @@
     onQrDecoded(val);
     inputField.value = '';
   }
-
-  window.addEventListener('load', function() {
-    setTimeout(startCamera, 600);
-  });
-
-  window.addEventListener('beforeunload', function() {
-    try { if (scanner && started) scanner.stop(); } catch (e) {}
-  });
 </script>
 </body>
 </html>
