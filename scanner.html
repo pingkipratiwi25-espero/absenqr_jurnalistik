@@ -322,9 +322,9 @@
       const res = await response.json();
 
       if (res.status === 'success') {
-        setStatus(`✔ <b>BERHASIL (${res.type})!</b><br>${res.student.name} (${res.student.class_name}) • ${res.time}`, 'success');
+        setStatus(`✔ <b>BERHASIL (${res.type})!</b><br>Nama: <b>${res.student.name}</b> (${res.student.class_name}) • Pukul ${res.time}`, 'success');
       } else {
-        setStatus(`✖ <b>GAGAL:</b> ${res.message}`, 'error');
+        setStatus(`✖ <b>PRESENSI DITOLAK!</b><br>${res.message}`, 'error');
       }
     } catch (err) {
       setStatus('✖ Gagal terhubung ke Google Sheets.', 'error');
